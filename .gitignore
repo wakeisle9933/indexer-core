@@ -4,6 +4,9 @@ build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
+src/main/resources/credential/credential.json
+src/main/resources/sitemap/mycodegate_Exception
+src/main/resources/sitemap/mycodegate_Processed
 
 ### STS ###
 .apt_generated

@@ -3,33 +3,49 @@
     <h1>Google Quick Search Indexer by <a href="#" @click="goToMyGithub">My Codegate</a></h1>
     <div>
       <label for="sitemapInput">
-        Input Sitemap
-        <span v-if="currentSitemap">(Current Sitemap: {{ currentSitemap }})</span>
+        Insert Sitemap
+        <span v-if="currentSitemap">(Current Sitemap: {{ currentSitemap }} - {{ sitemapAddedTime }})
+            <span
+                :class="{ 'refresh-text': currentSitemap }"
+                @click="addSitemap"
+            >Refresh</span>
+        </span>
       </label>
       <input type="text" id="sitemapInput" placeholder="ex) https://sample.com/sitemap.xml" v-model="sitemapUrl" @keyup.enter="addSitemap">
       <button @click="addSitemap">Add</button>
-      <button class="send-api-button" @click="sendAPI" :disabled="!canSendAPI">Send API</button>
+      <button class="send-api-button" @click="sendAPI" :disabled="!canSendAPI || loading">
+        {{ loading ? 'Indexing...' : 'Send API' }}
+      </button>
+      <div v-if="loading" class="loading-container">
+        <div class="loading-spinner"></div>
+      </div>
     </div>
     <div class="container">
       <div class="sitemap-list-container">
-        <h2 class="sticky-url-head">Sitemap URLs</h2>
+        <h2 class="sticky-url-head">Target URLs ({{ sitemapUrls.length }})</h2>
         <button @click="copyUrls">{{ copyButtonText }}</button>
         <ul>
-          <li v-for="(sitemap, index) in sitemapUrls" :key="index">{{ sitemap }}</li>
+          <li v-for="(sitemap, index) in sitemapUrls" :key="index">
+            <a :href="sitemap" target="_blank">{{ sitemap }}</a>
+          </li>
         </ul>
       </div>
       <div class="processed-list-container">
-        <h2 class="sticky-url-head">Processed URLs</h2>
-        <button @click="openProcessedFile">Open</button>
+        <h2 class="sticky-url-head">Indexed URLs ({{ processedUrls.length }})</h2>
+        <button @click="openProcessedFile">Edit</button>
         <ul>
-          <li v-for="(url, index) in processedUrls" :key="index">{{ url }}</li>
+          <li v-for="(url, index) in processedUrls" :key="index">
+            <a :href="url" target="_blank">{{ url }}</a>
+          </li>
         </ul>
       </div>
       <div class="exception-list-container">
-        <h2 class="sticky-url-head">Exception URLs</h2>
-        <button @click="openExceptionFile">Open</button>
+        <h2 class="sticky-url-head">Except URLs ({{ exceptionUrls.length }})</h2>
+        <button @click="openExceptionFile">Edit</button>
         <ul>
-          <li v-for="(url, index) in exceptionUrls" :key="index">{{ url }}</li>
+          <li v-for="(url, index) in exceptionUrls" :key="index">
+            <a :href="url" target="_blank">{{ url }}</a>
+          </li>
         </ul>
       </div>
     </div>
@@ -49,7 +65,9 @@ export default {
       processedUrls: [],
       exceptionUrls: [],
       copyButtonText: 'Copy',
-      copyMessageTimeout: null
+      copyMessageTimeout: null,
+      sitemapAddedTime: '',
+      loading: false
     };
   },
   computed: {
@@ -59,6 +77,10 @@ export default {
   },
   methods: {
     async addSitemap() {
+      if(this.currentSitemap !== '') {
+        this.sitemapUrl = this.currentSitemap;
+      }
+
       if (this.sitemapUrl.trim() !== '') {
         if (this.isValidDomain(this.sitemapUrl) && this.hasSitemapXml(this.sitemapUrl)) {
           try {
@@ -67,6 +89,7 @@ export default {
             this.processedUrls = response.data.processedUrls;
             this.exceptionUrls = response.data.exceptionUrls;
             this.currentSitemap = this.sitemapUrl;
+            this.sitemapAddedTime = this.getCurrentTime();
             this.sitemapUrl = '';
           } catch (error) {
             console.error(error);
@@ -91,7 +114,7 @@ export default {
       return url.toLowerCase().endsWith('/sitemap.xml');
     },
     goToMyGithub() {
-      window.location.href = 'https://github.com/wakeisle9933';
+      window.location.href = 'https://github.com/wakeisle9933/indexer-core';
     },
     async openProcessedFile() {
       try {
@@ -124,7 +147,6 @@ export default {
         alert(`There's nothing to copy!`);
         return;
       }
-
       const urlsText = this.sitemapUrls.join('\n');
       navigator.clipboard.writeText(urlsText)
       .then(() => {
@@ -138,8 +160,40 @@ export default {
         console.error('copy fail:', error);
       });
     },
-    sendAPI() {
-      // Send API 로직 구현 - 작성중
+    async sendAPI() {
+      try {
+        if (this.sitemapUrls.length === 0) {
+          alert("don't have a sitemap URL to send! 😅");
+          return;
+        }
+
+        this.loading = true;
+
+        const response = await axios.post('api/sitemaps/indexing', {
+          urls: this.sitemapUrls,
+          processedUrls: this.processedUrls,
+          exceptionUrls: this.exceptionUrls,
+          sitemapUrl: this.currentSitemap
+        });
+
+        if(response.data.success === true) {
+          alert(response.data.count + " URLs have been indexed 😆🚀");
+          await this.addSitemap();
+        }
+
+        console.log(response);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        this.loading = false;
+      }
+    },
+    getCurrentTime() {
+      const now = new Date();
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const seconds = String(now.getSeconds()).padStart(2, '0');
+      return `${hours}:${minutes}:${seconds}`;
     }
   }
 };
@@ -186,7 +240,7 @@ li {
 .processed-list-container,
 .exception-list-container {
   width: 33%;
-  max-height: 300px;
+  max-height: 400px;
   overflow-y: auto;
   transition: max-height 0.3s ease;
 }
@@ -224,4 +278,37 @@ li {
   box-shadow: none;
 }
 
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+</style>
+
+<style scoped>
+.refresh-text {
+  color: blue;
+  cursor: pointer;
+  font-weight: bold;
+}
 </style>
