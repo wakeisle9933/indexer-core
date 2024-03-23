@@ -20,4 +20,4 @@
 
 **Q) The Google Indexing API is designated for Jobposting & Broadcasting purposes; can it be used for other purposes?**
 
-**A)** Google states that using the API for purposes other than specified may result in penalties. However, many cases have proven that it can be used comfortably without any penalties. It's important to note that being penalty-free today does not guarantee safety tomorrow. Therefore, this API should only be used when the website has low traffic initially, as Google will automatically create indexes within an hour later, eliminating the need for its use.
+**A)** Google states that using the API for purposes other than specified may result in penalties. However, many cases have proven that it can be used comfortably without any penalties. But, It's important to note that being penalty-free today does not guarantee safety tomorrow. Therefore, this API should only be used when the website has low traffic initially. As the site's traffic increases, Google will automatically create indexes within an hour, eliminating the need for its use.
